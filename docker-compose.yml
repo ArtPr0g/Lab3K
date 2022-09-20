@@ -1,7 +1,7 @@
 version: "3.8" 
 services: 
   db:
-    image: postgres:12 и
+    image: postgres:12
     volumes:
       - type: volume
         source: postgresdb-data
