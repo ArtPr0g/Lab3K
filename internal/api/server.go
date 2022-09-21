@@ -53,9 +53,9 @@ func StartServer() {
 		tmpl.Execute(w, data)
 	})
 
-	http.ListenAndServe(":8080", nil)
-
 	r.Run() // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
+
+	http.ListenAndServe(":8080", nil)
 
 	log.Println("Server down")
 }
