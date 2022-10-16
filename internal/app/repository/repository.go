@@ -4,10 +4,9 @@ import (
 	"awesomeProject/internal/app/ds"
 	"awesomeProject/internal/app/dsn"
 	"context"
+	"github.com/google/uuid"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"math/rand"
-	"time"
 )
 
 type Repository struct {
@@ -25,34 +24,49 @@ func New(ctx context.Context) (*Repository, error) {
 	}, nil
 }
 
-func (r *Repository) GetKinoByID(id uint) (*ds.Kino, error) {
-	promo := &ds.Kino{}
+func (r *Repository) GetFilmList() ([]ds.Kino, error) {
 
-	err := r.db.First(promo, id).Error
-	if err != nil {
-		return nil, err
+	var kinos []ds.Kino
+	result := r.db.Find(&kinos)
+	if result.Error != nil {
+		return kinos, result.Error
 	}
+	return kinos, nil
 
-	return promo, nil
 }
 
-func (r *Repository) NewRandRecords() error {
-	rand.Seed(time.Now().UnixNano())
-	code := rand.Intn(900000) + 100000
-	release := rand.Intn(9990) + 10
-	grade := rand.Intn(10) + 1
-	storeList := []string{"Терминатор", "Бэтмен", "Челове паук", "Летнее время", "Горько", "Токийский гуль"}
-	storeRandom := rand.Intn(len(storeList))
-	store := storeList[storeRandom]
-	new := ds.Kino{
-		Code:    uint(code), // код от 100000 до 999999
-		Release: release,    // цена от 10 до 999
-		Grade:   grade,      //промо даёт в 2 раза больше цены промо
-		Name:    store,
-	}
-	err := r.db.Create(&new).Error
+func (r *Repository) AddFilm(kino ds.Kino) error {
+	err := r.db.Create(&kino).Error
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+func (r *Repository) GetFilmPrice(uuid string) (uint64, error) {
+	var kino ds.Kino
+	result := r.db.First(&kino, "uuid = ?", uuid)
+	if result.Error != nil {
+		return 0, result.Error
+	}
+	return kino.Price, nil
+}
+
+func (r *Repository) ChangePrice(uuid uuid.UUID, price uint64) error {
+	var kino ds.Kino
+	kino.UUID = uuid
+	result := r.db.Model(&kino).Update("Price", price)
+	if result.Error != nil {
+		return result.Error
+	}
+	return nil
+}
+
+func (r *Repository) DeleteFilm(uuid string) error {
+	var kino ds.Kino
+	result := r.db.Delete(&kino, "uuid = ?", uuid)
+	if result.Error != nil {
+		return result.Error
 	}
 	return nil
 }

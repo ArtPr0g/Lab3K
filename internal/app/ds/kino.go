@@ -1,9 +1,14 @@
 package ds
 
+import "github.com/google/uuid"
+
 type Kino struct {
-	ID      uint `gorm:"primarykey"`
-	Code    uint
-	Name    string
-	Release int
-	Grade   int
+	UUID       uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primary_key;"`
+	Name       string
+	Release    uint64
+	Grade      float64
+	Genre      string
+	Price      uint64
+	WhatchTime uint64
+	Summary    string
 }
