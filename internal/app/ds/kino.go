@@ -8,7 +8,7 @@ type Kino struct {
 	Release    uint64
 	Grade      float64
 	Genre      string
-	Price      uint64
+	Price      int
 	WhatchTime uint64
 	Summary    string
 }

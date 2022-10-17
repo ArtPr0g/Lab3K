@@ -17,10 +17,7 @@ import (
 // @contact.url https://vk.com/id175719571
 // @contact.email stebunov2002@mail.ru
 
-// @license.name AS IS (NO WARRANTY)
-
-// @host 0.0.0.0
-// @schemes https http
+// @host localhost:8080
 // @BasePath /
 
 func main() {

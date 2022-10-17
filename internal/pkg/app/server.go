@@ -1,11 +1,14 @@
 package app
 
 import (
+	_ "awesomeProject/docs"
 	"awesomeProject/internal/app/ds"
 	"awesomeProject/swagger/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"net/http"
 	"strconv"
 )
@@ -13,16 +16,18 @@ import (
 func (a *Application) StartServer() {
 	log.Println("Server start up")
 
-	r := gin.Default()
+	r := gin.New()
 
 	r.GET("/films", a.GetList)
-	r.GET("/films/price", a.GetFilmPrice)
+	r.GET("/films/price/:uuid", a.GetFilmPrice)
 
 	r.POST("/films/create", a.AddFilm)
 
-	r.PUT("/films/price/change", a.ChangePrice)
+	r.PUT("/films/price/change/:uuid", a.ChangePrice)
 
-	r.DELETE("/films/delete", a.DeleteFilm)
+	r.DELETE("/films/delete/:uuid", a.DeleteFilm)
+
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	r.Run() // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
 
@@ -54,7 +59,6 @@ func (a *Application) GetList(gCtx *gin.Context) {
 		return
 	}
 	gCtx.JSON(http.StatusOK, resp)
-
 }
 
 // GetFilmPrice  godoc
@@ -67,9 +71,20 @@ func (a *Application) GetList(gCtx *gin.Context) {
 // @Failure 	 500 {object} models.ModelError
 // @Router       /films/price [get]
 func (a *Application) GetFilmPrice(gCtx *gin.Context) {
-	uuid := gCtx.Query("UUID")
-	resp, err := a.repo.GetFilmPrice(uuid)
+	uuid := gCtx.Param("uuid")
+	log.Println(uuid)
+	respName, respPrice, err := a.repo.GetFilmPrice(uuid)
 	if err != nil {
+		if respName == "no film found with this uuid" {
+			gCtx.JSON(
+				http.StatusBadRequest,
+				&models.ModelError{
+					Description: "No film found with this uuid",
+					Error:       "uuid error",
+					Type:        "client",
+				})
+			return
+		}
 		gCtx.JSON(
 			http.StatusInternalServerError,
 			&models.ModelError{
@@ -82,9 +97,9 @@ func (a *Application) GetFilmPrice(gCtx *gin.Context) {
 	gCtx.JSON(
 		http.StatusOK,
 		&models.ModelFilmPrice{
-			Price: strconv.FormatUint(resp, 10),
+			Name:  respName,
+			Price: strconv.Itoa(respPrice),
 		})
-
 }
 
 // ChangePrice   godoc
@@ -98,14 +113,35 @@ func (a *Application) GetFilmPrice(gCtx *gin.Context) {
 // @Failure 	 500 {object} models.ModelError
 // @Router       /films/price/change [put]
 func (a *Application) ChangePrice(gCtx *gin.Context) {
-	inputUuid, _ := uuid.Parse(gCtx.Query("UUID"))
 	newPrice, _ := strconv.ParseUint(gCtx.Query("Price"), 10, 64)
-	err := a.repo.ChangePrice(inputUuid, newPrice)
+	if newPrice < 0 {
+		gCtx.JSON(
+			http.StatusBadRequest,
+			&models.ModelError{
+				Description: "The price cannot be non -negative",
+				Error:       "Price error",
+				Type:        "client",
+			})
+		return
+	}
+	uuidR := gCtx.Param("uuid")
+	inputUuid, _ := uuid.Parse(uuidR)
+	err, messageError := a.repo.ChangePrice(inputUuid, newPrice)
 	if err != nil {
+		if messageError == "record not found" {
+			gCtx.JSON(
+				http.StatusNotFound,
+				&models.ModelError{
+					Description: "record failed",
+					Error:       "db error",
+					Type:        "client",
+				})
+			return
+		}
 		gCtx.JSON(
 			http.StatusInternalServerError,
 			&models.ModelError{
-				Description: "update failed",
+				Description: "Update failed",
 				Error:       "db error",
 				Type:        "internal",
 			})
@@ -116,7 +152,6 @@ func (a *Application) ChangePrice(gCtx *gin.Context) {
 		&models.ModelPriceChanged{
 			Success: true,
 		})
-
 }
 
 // DeleteFilm   godoc
@@ -129,11 +164,21 @@ func (a *Application) ChangePrice(gCtx *gin.Context) {
 // @Failure 	 500 {object} models.ModelError
 // @Router       /films/delete [delete]
 func (a *Application) DeleteFilm(gCtx *gin.Context) {
-	uuid := gCtx.Query("UUID")
-	err := a.repo.DeleteFilm(uuid)
+	uuid := gCtx.Param("uuid")
+	messageError, err := a.repo.DeleteFilm(uuid)
 	if err != nil {
+		if messageError == "no film found with this uuid" {
+			gCtx.JSON(
+				http.StatusBadRequest,
+				&models.ModelError{
+					Description: "No film found with this uuid",
+					Error:       "uuid error",
+					Type:        "client",
+				})
+			return
+		}
 		gCtx.JSON(
-			http.StatusInternalServerError,
+			http.StatusNotFound,
 			&models.ModelError{
 				Description: "delete failed",
 				Error:       "db error",
@@ -158,28 +203,36 @@ func (a *Application) DeleteFilm(gCtx *gin.Context) {
 // @Param Release query uint64 true "Дата выхода фильма"
 // @Param Grade  query float64 true "Оценка фильма"
 // @Param Genre query string true "Жанр фильма"
-// @Param Price query uint64 true "Стоимоть фильма"
+// @Param Price query int true "Стоимоть фильма"
 // @Param WhatchTime query uint64 true "Длительность фильма(мин.)"
 // @Param Summary  query string true "Описание"
 // @Success      201  {object}  models.ModelFilmCreated
 // @Failure 500 {object} models.ModelError
 // @Router       /films/create [Post]
 func (a *Application) AddFilm(gCtx *gin.Context) {
-	price, _ := strconv.ParseUint(gCtx.Query("Price"), 10, 64)
-	year, _ := strconv.ParseUint(gCtx.Query("Release"), 10, 64)
-	grade, _ := strconv.ParseFloat(gCtx.Query("Grade"), 64)
-	time, _ := strconv.ParseUint(gCtx.Query("WatchTime"), 10, 64)
+	film := ds.Kino{}
 
-	film := ds.Kino{
-		Name:       gCtx.Query("Name"),
-		Price:      price,
-		Release:    year,
-		Grade:      grade,
-		Genre:      gCtx.Query("Genre"),
-		WhatchTime: time,
-		Summary:    gCtx.Query("Summary"),
+	if err := gCtx.BindJSON(&film); err != nil {
+		gCtx.JSON(
+			http.StatusInternalServerError,
+			&models.ModelError{
+				Description: "adding failed",
+				Error:       "db error",
+				Type:        "internal",
+			})
+		return
 	}
-
+	if film.Price < 0 {
+		gCtx.JSON(
+			http.StatusBadRequest,
+			&models.ModelError{
+				Description: "The price cannot be non -negative",
+				Error:       "Price error",
+				Type:        "client",
+			})
+		return
+	}
+	film.UUID = uuid.New()
 	err := a.repo.AddFilm(film)
 	if err != nil {
 		gCtx.JSON(
@@ -196,5 +249,4 @@ func (a *Application) AddFilm(gCtx *gin.Context) {
 		&models.ModelFilmCreated{
 			Success: true,
 		})
-
 }

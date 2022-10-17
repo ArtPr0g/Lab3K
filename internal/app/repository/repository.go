@@ -35,38 +35,50 @@ func (r *Repository) GetFilmList() ([]ds.Kino, error) {
 
 }
 
-func (r *Repository) AddFilm(kino ds.Kino) error {
-	err := r.db.Create(&kino).Error
-	if err != nil {
-		return err
-	}
-	return nil
-}
+/*func (r *Repository) FilmPrice(id int) (*ds.Kino, error) {
 
-func (r *Repository) GetFilmPrice(uuid string) (uint64, error) {
+	product := &ds.Kino{}
+	err := r.db.First(product, id).Error // find product with code D42
+	if err != nil {
+		return nil, err
+	}
+
+	return product, nil
+}*/
+
+func (r *Repository) GetFilmPrice(uuid string) (string, int, error) {
 	var kino ds.Kino
 	result := r.db.First(&kino, "uuid = ?", uuid)
 	if result.Error != nil {
-		return 0, result.Error
+		return "no film found with this uuid", 0, result.Error
 	}
-	return kino.Price, nil
+	return kino.Name, kino.Price, nil
 }
 
-func (r *Repository) ChangePrice(uuid uuid.UUID, price uint64) error {
-	var kino ds.Kino
-	kino.UUID = uuid
-	result := r.db.Model(&kino).Update("Price", price)
-	if result.Error != nil {
-		return result.Error
+func (r *Repository) ChangePrice(uuid uuid.UUID, price uint64) (error, string) {
+	var product ds.Kino
+	product.UUID = uuid
+	err := r.db.First(&product, "uuid = ?", uuid).Error
+	if err != nil {
+		return err, "record not found"
 	}
-	return nil
+	err = r.db.Model(&product).Update("price", price).Error
+	if err != nil {
+		return err, "record not update"
+	}
+	return nil, ""
 }
 
-func (r *Repository) DeleteFilm(uuid string) error {
-	var kino ds.Kino
-	result := r.db.Delete(&kino, "uuid = ?", uuid)
+func (r *Repository) DeleteFilm(uuid string) (string, error) {
+	var product ds.Kino
+	result := r.db.Delete(&product, "uuid = ?", uuid)
 	if result.Error != nil {
-		return result.Error
+		return "no product found with this uuid", result.Error
 	}
-	return nil
+	return uuid, nil
+}
+
+func (r *Repository) AddFilm(book ds.Kino) error {
+	return r.db.Create(&book).Error
+
 }

@@ -1,0 +1,211 @@
+basePath: /
+definitions:
+  ds.Kino:
+    properties:
+      genre:
+        type: string
+      grade:
+        type: number
+      name:
+        type: string
+      price:
+        type: integer
+      release:
+        type: integer
+      summary:
+        type: string
+      uuid:
+        type: string
+      whatchTime:
+        type: integer
+    type: object
+  models.ModelError:
+    properties:
+      description:
+        description: description
+        type: string
+      error:
+        description: error
+        type: string
+      type:
+        description: type
+        type: string
+    type: object
+  models.ModelFilmCreated:
+    properties:
+      success:
+        description: success
+        type: boolean
+    type: object
+  models.ModelFilmDeleted:
+    properties:
+      price:
+        type: boolean
+    type: object
+  models.ModelFilmPrice:
+    properties:
+      name:
+        type: string
+      price:
+        type: string
+    type: object
+  models.ModelPriceChanged:
+    properties:
+      price:
+        type: boolean
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: stebunov2002@mail.ru
+    name: API Support
+    url: https://vk.com/id175719571
+  description: The best place to watch movies
+  title: Films
+  version: "1.0"
+paths:
+  /films:
+    get:
+      description: Get a list of all films
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ds.Kino'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ModelError'
+      summary: Get all records
+      tags:
+      - Info
+  /films/create:
+    post:
+      description: Adding a new film to database
+      parameters:
+      - description: Название фильма
+        in: query
+        name: Name
+        required: true
+        type: string
+      - description: Дата выхода фильма
+        in: query
+        name: Release
+        required: true
+        type: integer
+      - description: Оценка фильма
+        in: query
+        name: Grade
+        required: true
+        type: number
+      - description: Жанр фильма
+        in: query
+        name: Genre
+        required: true
+        type: string
+      - description: Стоимоть фильма
+        in: query
+        name: Price
+        required: true
+        type: integer
+      - description: Длительность фильма(мин.)
+        in: query
+        name: WhatchTime
+        required: true
+        type: integer
+      - description: Описание
+        in: query
+        name: Summary
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.ModelFilmCreated'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ModelError'
+      summary: Add a new film
+      tags:
+      - Add
+  /films/delete:
+    delete:
+      description: Delete a film via its uuid
+      parameters:
+      - description: UUID фильмы
+        in: query
+        name: UUID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ModelFilmDeleted'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ModelError'
+      summary: Delete a film
+      tags:
+      - Change
+  /films/price:
+    get:
+      description: Get a price via uuid of a film
+      parameters:
+      - description: UUID фильма
+        in: query
+        name: UUID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ModelFilmPrice'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ModelError'
+      summary: Get price for a film
+      tags:
+      - Info
+  /films/price/change:
+    put:
+      description: Change a price for a film via its uuid
+      parameters:
+      - description: UUID фильма
+        in: query
+        name: UUID
+        required: true
+        type: string
+      - description: Новая цена
+        in: query
+        name: Price
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ModelPriceChanged'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ModelError'
+      summary: Change film price
+      tags:
+      - Change
+swagger: "2.0"
