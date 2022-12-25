@@ -1,10 +1,8 @@
 package main
 
 import (
-	"awesomeProject/internal/app/config"
 	"awesomeProject/internal/pkg/app"
 	"context"
-	"fmt"
 	log "github.com/sirupsen/logrus"
 	"os"
 )
@@ -18,33 +16,25 @@ import (
 // @contact.email stebunov2002@mail.ru
 
 // @host localhost:8080
+// @schemes http https
 // @BasePath /
 
 func main() {
+	log.Println("application start")
+
 	ctx := context.Background()
-	log.Println("app start")
-	cfg, err := config.NewConfig(ctx)
-	if err != nil {
-		log.WithContext(ctx).WithError(err).Error("cant init config")
 
-		os.Exit(2)
-	}
-
-	ctx = config.WrapContext(ctx, cfg)
-
-	fmt.Println(cfg)
 	application, err := app.New(ctx)
 	if err != nil {
-		log.WithContext(ctx).WithError(err).Error("can`t create application")
-
+		log.Printf("can`t create application: %s", err)
 		os.Exit(2)
 	}
 
-	err = application.Run(ctx)
+	err = application.Run()
 	if err != nil {
-		log.WithContext(ctx).WithError(err).Error("can`t run application")
-
+		log.Printf("can`t run application: %s", err)
 		os.Exit(2)
 	}
-	log.Println("app terminated")
+
+	log.Println("application terminated")
 }

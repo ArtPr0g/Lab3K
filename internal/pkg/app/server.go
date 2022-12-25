@@ -2,251 +2,63 @@ package app
 
 import (
 	_ "awesomeProject/docs"
-	"awesomeProject/internal/app/ds"
-	"awesomeProject/swagger/models"
+	"awesomeProject/internal/app/role"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	"net/http"
-	"strconv"
 )
 
 func (a *Application) StartServer() {
-	log.Println("Server start up")
+	log.Println("server start up")
 
-	r := gin.New()
+	r := gin.Default()
 
-	r.GET("/films", a.GetList)
-	r.GET("/films/price/:uuid", a.GetFilmPrice)
+	r.Use(CORSMiddleware())
 
-	r.POST("/films/create", a.AddFilm)
-
-	r.PUT("/films/price/change/:uuid", a.ChangePrice)
-
-	r.DELETE("/films/delete/:uuid", a.DeleteFilm)
-
+	// Запрос для свагера
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	r.Run() // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
+	// Запросы для магазина:
+	r.GET("/film", a.GetFilms)
 
-	log.Println("Server down")
-}
+	r.GET("/film/:uuid", a.GetFilm)
 
-type inter struct {
-	Status string `json:"status"`
-}
+	r.GET("/film/:uuid/:quantity", a.GetVideo)
 
-// GetList godoc
-// @Summary      Get all records
-// @Description  Get a list of all films
-// @Tags         Info
-// @Produce      json
-// @Success      200  {object}  ds.Kino
-// @Failure 500 {object} models.ModelError
-// @Router       /films [get]
-func (a *Application) GetList(gCtx *gin.Context) {
-	resp, err := a.repo.GetFilmList()
-	if err != nil {
-		gCtx.JSON(
-			http.StatusInternalServerError,
-			&models.ModelError{
-				Description: "can`t get a list",
-				Error:       "db error",
-				Type:        "internal",
-			})
-		return
-	}
-	gCtx.JSON(http.StatusOK, resp)
-}
+	// Запросы для корзины:
+	r.GET("/cart/:film", a.GetCart1)
 
-// GetFilmPrice  godoc
-// @Summary      Get price for a film
-// @Description  Get a price via uuid of a film
-// @Tags         Info
-// @Produce      json
-// @Param UUID query string true "UUID фильма"
-// @Success      200  {object}  models.ModelFilmPrice
-// @Failure 	 500 {object} models.ModelError
-// @Router       /films/price [get]
-func (a *Application) GetFilmPrice(gCtx *gin.Context) {
-	uuid := gCtx.Param("uuid")
-	log.Println(uuid)
-	respName, respPrice, err := a.repo.GetFilmPrice(uuid)
-	if err != nil {
-		if respName == "no film found with this uuid" {
-			gCtx.JSON(
-				http.StatusBadRequest,
-				&models.ModelError{
-					Description: "No film found with this uuid",
-					Error:       "uuid error",
-					Type:        "client",
-				})
-			return
-		}
-		gCtx.JSON(
-			http.StatusInternalServerError,
-			&models.ModelError{
-				Description: "can`t get a price",
-				Error:       "db error",
-				Type:        "internal",
-			})
-		return
-	}
-	gCtx.JSON(
-		http.StatusOK,
-		&models.ModelFilmPrice{
-			Name:  respName,
-			Price: strconv.Itoa(respPrice),
-		})
-}
+	r.GET("/cart/increase/:film", a.IncreaseQuantity)
 
-// ChangePrice   godoc
-// @Summary      Change film price
-// @Description  Change a price for a film via its uuid
-// @Tags         Change
-// @Produce      json
-// @Param UUID query string true "UUID фильма"
-// @Param Price query int true "Новая цена"
-// @Success      200  {object}  models.ModelPriceChanged
-// @Failure 	 500 {object} models.ModelError
-// @Router       /films/price/change [put]
-func (a *Application) ChangePrice(gCtx *gin.Context) {
-	newPrice, _ := strconv.ParseUint(gCtx.Query("Price"), 10, 64)
-	if newPrice < 0 {
-		gCtx.JSON(
-			http.StatusBadRequest,
-			&models.ModelError{
-				Description: "The price cannot be non -negative",
-				Error:       "Price error",
-				Type:        "client",
-			})
-		return
-	}
-	uuidR := gCtx.Param("uuid")
-	inputUuid, _ := uuid.Parse(uuidR)
-	err, messageError := a.repo.ChangePrice(inputUuid, newPrice)
-	if err != nil {
-		if messageError == "record not found" {
-			gCtx.JSON(
-				http.StatusNotFound,
-				&models.ModelError{
-					Description: "record failed",
-					Error:       "db error",
-					Type:        "client",
-				})
-			return
-		}
-		gCtx.JSON(
-			http.StatusInternalServerError,
-			&models.ModelError{
-				Description: "Update failed",
-				Error:       "db error",
-				Type:        "internal",
-			})
-		return
-	}
-	gCtx.JSON(
-		http.StatusOK,
-		&models.ModelPriceChanged{
-			Success: true,
-		})
-}
+	r.DELETE("/cart/delete/:film", a.DeleteCart)
 
-// DeleteFilm   godoc
-// @Summary      Delete a film
-// @Description  Delete a film via its uuid
-// @Tags         Change
-// @Produce      json
-// @Param UUID query string true "UUID фильмы"
-// @Success      200  {object}  models.ModelFilmDeleted
-// @Failure 	 500 {object} models.ModelError
-// @Router       /films/delete [delete]
-func (a *Application) DeleteFilm(gCtx *gin.Context) {
-	uuid := gCtx.Param("uuid")
-	messageError, err := a.repo.DeleteFilm(uuid)
-	if err != nil {
-		if messageError == "no film found with this uuid" {
-			gCtx.JSON(
-				http.StatusBadRequest,
-				&models.ModelError{
-					Description: "No film found with this uuid",
-					Error:       "uuid error",
-					Type:        "client",
-				})
-			return
-		}
-		gCtx.JSON(
-			http.StatusNotFound,
-			&models.ModelError{
-				Description: "delete failed",
-				Error:       "db error",
-				Type:        "internal",
-			})
-		return
-	}
-	gCtx.JSON(
-		http.StatusOK,
-		&models.ModelFilmDeleted{
-			Success: true,
-		})
+	// Запросы для авторизации
+	r.POST("/login", a.Login)
 
-}
+	r.POST("/sign_up", a.Register)
 
-// AddFilm godoc
-// @Summary      Add a new film
-// @Description  Adding a new film to database
-// @Tags         Add
-// @Produce      json
-// @Param Name query string true "Название фильма"
-// @Param Release query uint64 true "Дата выхода фильма"
-// @Param Grade  query float64 true "Оценка фильма"
-// @Param Genre query string true "Жанр фильма"
-// @Param Price query int true "Стоимоть фильма"
-// @Param WhatchTime query uint64 true "Длительность фильма(мин.)"
-// @Param Summary  query string true "Описание"
-// @Success      201  {object}  models.ModelFilmCreated
-// @Failure 500 {object} models.ModelError
-// @Router       /films/create [Post]
-func (a *Application) AddFilm(gCtx *gin.Context) {
-	film := ds.Kino{}
+	r.GET("/logout", a.Logout)
 
-	if err := gCtx.BindJSON(&film); err != nil {
-		gCtx.JSON(
-			http.StatusInternalServerError,
-			&models.ModelError{
-				Description: "adding failed",
-				Error:       "db error",
-				Type:        "internal",
-			})
-		return
-	}
-	if film.Price < 0 {
-		gCtx.JSON(
-			http.StatusBadRequest,
-			&models.ModelError{
-				Description: "The price cannot be non -negative",
-				Error:       "Price error",
-				Type:        "client",
-			})
-		return
-	}
-	film.UUID = uuid.New()
-	err := a.repo.AddFilm(film)
-	if err != nil {
-		gCtx.JSON(
-			http.StatusInternalServerError,
-			&models.ModelError{
-				Description: "adding failed",
-				Error:       "db error",
-				Type:        "internal",
-			})
-		return
-	}
-	gCtx.JSON(
-		http.StatusOK,
-		&models.ModelFilmCreated{
-			Success: true,
-		})
+	r.GET("/role", a.Role)
+
+	// Запросы для всех авторизированных пользователей
+	r.Use(a.WithAuthCheck(role.Buyer, role.Manager, role.Admin)).GET("/cart", a.GetCart)
+
+	// Запросы для менеджеров
+	r.Use(a.WithAuthCheck(role.Manager)).POST("/film", a.CreateFilm)
+
+	r.Use(a.WithAuthCheck(role.Manager)).DELETE("/film/:uuid", a.DeleteFilm)
+
+	r.Use(a.WithAuthCheck(role.Manager)).PUT("/film/:uuid", a.ChangeFilm)
+
+	r.Use(a.WithAuthCheck(role.Manager)).GET("/orders", a.GetOrders)
+
+	r.Use(a.WithAuthCheck(role.Manager)).PUT("/orders/:uuid", a.ChangeStatus)
+
+	r.Use(a.WithAuthCheck(role.Manager)).GET("/user/:uuid", a.GetUser)
+
+	_ = r.Run()
+
+	log.Println("server down")
 }

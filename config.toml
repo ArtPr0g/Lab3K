@@ -1,0 +1,7 @@
+#ServiceHost = "0.0.0.0" # просто ключ значение
+#ServicePort = 80
+#
+#[BMSUNewConfig] # вложеннный объект
+#SiteAddress = "api.www.bmstu.ru" # значение полей объекта
+#Protocol = "https"
+#DayLimit = 30

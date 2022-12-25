@@ -12,8 +12,18 @@ services:
       POSTGRES_USER: kino_user
       POSTGRES_DB: kino
       POSTGRES_PASSWORD: kino_password
+  redis:
+    image: redis:6.2-alpine
+    restart: always
+    ports:
+      - '6379:6379'
+    command: redis-server --save 20 1 --loglevel warning
+    volumes:
+        - redis-data:/data
 
 volumes:
   postgresdb-data:
+    driver: local
+  redis-data:
     driver: local
 

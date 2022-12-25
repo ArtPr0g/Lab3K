@@ -1,6 +1,6 @@
 basePath: /
 definitions:
-  ds.Kino:
+  ds.Film:
     properties:
       genre:
         type: string
@@ -65,23 +65,50 @@ info:
   version: "1.0"
 paths:
   /films:
-    get:
-      description: Get a list of all films
+    delete:
+      description: Delete a film via its uuid
+      parameters:
+      - description: UUID фильмы
+        in: query
+        name: UUID
+        required: true
+        type: string
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/ds.Kino'
+            $ref: '#/definitions/models.ModelFilmDeleted'
         "500":
           description: Internal Server Error
           schema:
             $ref: '#/definitions/models.ModelError'
-      summary: Get all records
+      summary: Delete a film
+      tags:
+      - Change
+    get:
+      description: Get a price via uuid of a film
+      parameters:
+      - description: UUID фильма
+        in: query
+        name: UUID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ModelFilmPrice'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ModelError'
+      summary: Get price for a film
       tags:
       - Info
-  /films/create:
     post:
       description: Adding a new film to database
       parameters:
@@ -134,53 +161,7 @@ paths:
       summary: Add a new film
       tags:
       - Add
-  /films/delete:
-    delete:
-      description: Delete a film via its uuid
-      parameters:
-      - description: UUID фильмы
-        in: query
-        name: UUID
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/models.ModelFilmDeleted'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/models.ModelError'
-      summary: Delete a film
-      tags:
-      - Change
-  /films/price:
-    get:
-      description: Get a price via uuid of a film
-      parameters:
-      - description: UUID фильма
-        in: query
-        name: UUID
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/models.ModelFilmPrice'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/models.ModelError'
-      summary: Get price for a film
-      tags:
-      - Info
-  /films/price/change:
+  /films/:uuid:
     put:
       description: Change a price for a film via its uuid
       parameters:

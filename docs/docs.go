@@ -22,19 +22,28 @@ const docTemplate = `{
     "paths": {
         "/films": {
             "get": {
-                "description": "Get a list of all films",
+                "description": "Get a price via uuid of a film",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "Info"
                 ],
-                "summary": "Get all records",
+                "summary": "Get price for a film",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UUID фильма",
+                        "name": "UUID",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/ds.Kino"
+                            "$ref": "#/definitions/models.ModelFilmPrice"
                         }
                     },
                     "500": {
@@ -44,9 +53,7 @@ const docTemplate = `{
                         }
                     }
                 }
-            }
-        },
-        "/films/create": {
+            },
             "post": {
                 "description": "Adding a new film to database",
                 "produces": [
@@ -121,9 +128,7 @@ const docTemplate = `{
                         }
                     }
                 }
-            }
-        },
-        "/films/delete": {
+            },
             "delete": {
                 "description": "Delete a film via its uuid",
                 "produces": [
@@ -158,42 +163,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/films/price": {
-            "get": {
-                "description": "Get a price via uuid of a film",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Info"
-                ],
-                "summary": "Get price for a film",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "UUID фильма",
-                        "name": "UUID",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/models.ModelFilmPrice"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/models.ModelError"
-                        }
-                    }
-                }
-            }
-        },
-        "/films/price/change": {
+        "/films/:uuid": {
             "put": {
                 "description": "Change a price for a film via its uuid",
                 "produces": [
@@ -237,7 +207,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "ds.Kino": {
+        "ds.Film": {
             "type": "object",
             "properties": {
                 "genre": {

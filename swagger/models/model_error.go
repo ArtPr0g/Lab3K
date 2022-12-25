@@ -12,6 +12,16 @@ import (
 	"github.com/go-openapi/swag"
 )
 
+type ErrRespType string
+
+const (
+	TypeClientReq   ErrRespType = "Client error"
+	TypeInternalReq ErrRespType = "Internal"
+	Err400          ErrRespType = "Bad Request"
+	Err404          ErrRespType = "Not Found"
+	Err500          ErrRespType = "Internal Server Error"
+)
+
 // ModelError model error
 //
 // swagger:model model.Error
@@ -21,10 +31,10 @@ type ModelError struct {
 	Description string `json:"description,omitempty"`
 
 	// error
-	Error string `json:"error,omitempty"`
+	Error ErrRespType `json:"error,omitempty"`
 
 	// type
-	Type string `json:"type,omitempty"`
+	Type ErrRespType `json:"type,omitempty"`
 }
 
 // Validate validates this model error
